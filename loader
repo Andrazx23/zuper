@@ -17,9 +17,7 @@ end
 -- SECTION 1: CEK GAME YANG DIDUKUNG
 -- ==================================================
 local SUPPORTED_GAMES = {
-    [6701277882] = "Fish It!",
-    [7671049560] = "The Forge",
-    [5750914919] = "Fisch"    
+    [97598239454123] = "Grow a Garden 2"
 }
 
 if not SUPPORTED_GAMES[game.GameId] then
