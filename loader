@@ -1,1 +1,226 @@
+local API_ENDPOINT = "https://api.zuperming.store/redeem"
+local Http = game:GetService("HttpService")
+local StarterGui = game:GetService("StarterGui")
+local Players = game:GetService("Players")
+local RbxAnalyticsService = game:GetService("RbxAnalyticsService")
+local LocalPlayer = Players.LocalPlayer
 
+-- Extract key brand prefix dynamically (e.g. "ZUPERMING" or service provider random prefix)
+local key = (_G.script_key and tostring(_G.script_key)) or ""
+local BRAND = "KEY SYSTEM"
+local parsedPrefix = key:match("^([^-]+)")
+if parsedPrefix and #parsedPrefix >= 3 and #parsedPrefix <= 12 then
+    BRAND = parsedPrefix
+end
+
+-- ==================================================
+-- SECTION 1: CEK GAME YANG DIDUKUNG
+-- ==================================================
+local SUPPORTED_GAMES = {
+    [6701277882] = "Fish It!",
+    [7671049560] = "The Forge",
+    [5750914919] = "Fisch"    
+}
+
+if not SUPPORTED_GAMES[game.GameId] then
+    StarterGui:SetCore("SendNotification", {
+        Title = BRAND .. " ACCESS DENIED",
+        Text = "Game ini TIDAK DIDUKUNG!",
+        Duration = 15
+    })
+    task.wait(4)
+    LocalPlayer:Kick(
+        "\n[" .. BRAND .. " KEYSYSTEM]\n\n❌ Game tidak didukung\nGameId: "
+        .. game.GameId
+    )
+    return
+end
+
+local CURRENT_GAME_NAME = SUPPORTED_GAMES[game.GameId]
+
+-- ==================================================
+-- SECTION 2: HTTP REQUEST
+-- ==================================================
+local function request(url, payload)
+    local req = (syn and syn.request) or http_request
+    if not req then
+        return "unsupported"
+    end
+
+    local ok, res = pcall(function()
+        return req({
+            Url = url,
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json"
+            },
+            Body = payload
+        })
+    end)
+
+    if not ok or not res then
+        return nil
+    end
+
+    return res.Body
+end
+
+-- ==================================================
+-- SECTION 3: HWID
+-- ==================================================
+local HWID = RbxAnalyticsService:GetClientId()
+pcall(setclipboard, HWID)
+
+-- ==================================================
+-- SECTION 4: LOAD SCRIPT
+-- ==================================================
+local function safeLoad(url)
+    local ok, src = pcall(function()
+        return game:HttpGet(url)
+    end)
+    if not ok or not src or #src < 10 then
+        StarterGui:SetCore("SendNotification", {
+            Title = BRAND .. " ERROR",
+            Text = "Failed to load script",
+            Duration = 8
+        })
+        return false
+    end
+    local loadOk, err = pcall(function()
+        loadstring(src)()
+    end)
+    if not loadOk then
+        StarterGui:SetCore("SendNotification", {
+            Title = BRAND .. " ERROR",
+            Text = "Script execution error: " .. tostring(err),
+            Duration = 8
+        })
+        return false
+    end
+    return true
+end
+
+local function loadPremiumScript()
+    StarterGui:SetCore("SendNotification", {
+        Title = BRAND .. " PREMIUM",
+        Text = "Loading premium script...",
+        Duration = 5
+    })
+end
+
+-- ==================================================
+-- SECTION 5: REDEEM KEY
+-- ==================================================
+local function redeem(key)
+    StarterGui:SetCore("SendNotification", {
+        Title = BRAND,
+        Text = "Verifying key...",
+        Duration = 5
+    })
+
+    local payload = Http:JSONEncode({
+        key = key,
+        hwid = HWID,
+        gameId = game.GameId,
+        placeId = game.PlaceId,
+        username = LocalPlayer.Name,
+        executor = identifyexecutor and identifyexecutor() or "Unknown",
+        isKaitun = _G.KaitunMode == true
+    })
+
+    local raw = request(API_ENDPOINT, payload)
+
+    if raw == "unsupported" then
+        StarterGui:SetCore("SendNotification", {
+            Title = BRAND .. " ERROR",
+            Text = "Executor not supported (no http_request)",
+            Duration = 8
+        })
+        return false
+    end
+
+    if not raw then
+        StarterGui:SetCore("SendNotification", {
+            Title = BRAND .. " ERROR",
+            Text = "Connection failed. Try again later.",
+            Duration = 8
+        })
+        return false
+    end
+
+    local ok2, data = pcall(function()
+        return Http:JSONDecode(raw)
+    end)
+    if not ok2 or not data then
+        StarterGui:SetCore("SendNotification", {
+            Title = BRAND .. " ERROR",
+            Text = "Invalid response from server",
+            Duration = 8
+        })
+        return false
+    end
+
+    if data.status == "premium" then
+        StarterGui:SetCore("SendNotification", {
+            Title = BRAND .. " PREMIUM",
+            Text = "✅ " .. (data.message or "Access granted"),
+            Duration = 6
+        })
+        if data.scriptUrl and #data.scriptUrl > 5 then
+            safeLoad(data.scriptUrl)
+        end
+        return true
+    end
+
+    if data.status == "kick" then
+        task.wait(1)
+        LocalPlayer:Kick(
+            "\n[" .. BRAND .. " PREMIUM]\n\n❌ DEVICE LIMIT FULL\n\nHWID:\n" .. HWID
+        )
+        return "kick"
+    end
+
+    if data.reason == "HWID_LIMIT" then
+        task.wait(1)
+        LocalPlayer:Kick(
+            "\n[" .. BRAND .. " PREMIUM]\n\n❌ DEVICE LIMIT FULL\n\nHWID:\n" .. HWID
+        )
+        return "hwid_mismatch"
+    end
+
+    StarterGui:SetCore("SendNotification", {
+        Title = BRAND,
+        Text = "Key tidak valid ❌",
+        Duration = 6
+    })
+
+    return false
+end
+
+
+-- ==================================================
+-- SECTION 6: MAIN FLOW
+-- ==================================================
+task.wait(3)
+
+if #key >= 6 then
+    local result = redeem(key)
+    if result == true then
+        task.wait(2)
+        loadPremiumScript()
+    elseif result == "kick" or result == "hwid_mismatch" then
+        return
+    else
+        StarterGui:SetCore("SendNotification", {
+            Title = BRAND,
+            Text = "Invalid key. Access denied.",
+            Duration = 8
+        })
+    end
+else
+    StarterGui:SetCore("SendNotification", {
+        Title = BRAND,
+        Text = "No key provided. Access denied.",
+        Duration = 8
+    })
+end
