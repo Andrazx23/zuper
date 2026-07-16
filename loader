@@ -6,7 +6,7 @@ local RbxAnalyticsService = game:GetService("RbxAnalyticsService")
 local LocalPlayer = Players.LocalPlayer
 
 -- Extract key brand prefix dynamically (e.g. "ZUPERMING" or service provider random prefix)
-local key = (_G.script_key and tostring(_G.script_key)) or ""
+local key = (_G.key_script and tostring(_G.key_script)) or ""
 local BRAND = "KEY SYSTEM"
 local parsedPrefix = key:match("^([^-]+)")
 if parsedPrefix and #parsedPrefix >= 3 and #parsedPrefix <= 12 then
