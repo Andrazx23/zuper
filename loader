@@ -1,4 +1,4 @@
-local API_ENDPOINT = "https://api.zuperming.store/redeem"
+local API_ENDPOINT = "https://zuperming.store/loader"
 local Http = game:GetService("HttpService")
 local StarterGui = game:GetService("StarterGui")
 local Players = game:GetService("Players")
