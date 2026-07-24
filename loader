@@ -17,7 +17,8 @@ end
 -- SECTION 1: CEK GAME YANG DIDUKUNG
 -- ==================================================
 local SUPPORTED_GAMES = {
-    [10200395747] = "Grow a Garden 2"
+    [10200395747] = "Grow a Garden 2", 
+    [6739698191] = "Violence District"
 }
 
 if not SUPPORTED_GAMES[game.GameId] then
